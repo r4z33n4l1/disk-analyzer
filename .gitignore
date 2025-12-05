@@ -1,0 +1,12 @@
+# Disk reports (JSON)
+disk-report.json
+*.json
+
+# Finder shortcuts
+shortcuts/
+
+# Python cache
+__pycache__/
+*.pyc
+.DS_Store
+

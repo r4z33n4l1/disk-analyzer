@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disk Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a26;
+            --bg-hover: #24243a;
+            --accent-primary: #ff6b35;
+            --accent-secondary: #f7c948;
+            --accent-tertiary: #7b68ee;
+            --text-primary: #f0f0f5;
+            --text-secondary: #9090a8;
+            --text-muted: #606080;
+            --border-color: #2a2a40;
+            --success: #4ade80;
+            --warning: #fbbf24;
+            --danger: #f87171;
+            --gradient-accent: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Background effects */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(255, 107, 53, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(123, 104, 238, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(247, 201, 72, 0.03) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            grid-template-rows: auto 1fr;
+            height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            padding: 1.25rem 2rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--gradient-accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--accent-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
+        }
+
+        .btn-primary {
+            background: var(--gradient-accent);
+            border: none;
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .tree-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+
+        .tree-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .tree-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tree-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .tree-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .tree-item.selected {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+        }
+
+        .tree-item.selected .tree-name {
+            color: var(--accent-primary);
+        }
+
+        .tree-toggle {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.625rem;
+            transition: transform 0.2s ease;
+        }
+
+        .tree-toggle.expanded {
+            transform: rotate(90deg);
+        }
+
+        .tree-icon {
+            font-size: 1rem;
+        }
+
+        .tree-name {
+            flex: 1;
+            font-size: 0.875rem;
+            font-weight: 400;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tree-size {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .tree-children {
+            padding-left: 1.25rem;
+            display: none;
+        }
+
+        .tree-children.expanded {
+            display: block;
+        }
+
+        /* Main content */
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .breadcrumb {
+            padding: 1rem 1.5rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            overflow-x: auto;
+        }
+
+        .breadcrumb::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .breadcrumb::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .breadcrumb-item {
+            color: var(--text-secondary);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: color 0.15s ease;
+        }
+
+        .breadcrumb-item:hover {
+            color: var(--accent-primary);
+        }
+
+        .breadcrumb-item.current {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-muted);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .content::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        /* Item grid */
+        .items-header {
+            display: grid;
+            grid-template-columns: 1fr 120px 100px 140px;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-primary);
+            z-index: 10;
+        }
+
+        .items-header > div {
+            cursor: pointer;
+            transition: color 0.15s ease;
+        }
+
+        .items-header > div:hover {
+            color: var(--text-primary);
+        }
+
+        .item-row {
+            display: grid;
+            grid-template-columns: 1fr 120px 100px 140px;
+            gap: 1rem;
+            padding: 0.875rem 1rem;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            animation: fadeIn 0.3s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .item-row:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .item-name {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .item-icon {
+            font-size: 1.25rem;
+        }
+
+        .item-label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+            min-width: 0;
+        }
+
+        .item-title {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-size {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--accent-secondary);
+            display: flex;
+            align-items: center;
+        }
+
+        .item-type {
+            display: flex;
+            align-items: center;
+        }
+
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.625rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .type-badge.dir {
+            border-color: var(--accent-tertiary);
+            color: var(--accent-tertiary);
+        }
+
+        .type-badge.file {
+            border-color: var(--text-muted);
+        }
+
+        .item-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.75rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-family: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s ease;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: #000;
+        }
+
+        /* Size bar visualization */
+        .size-bar-container {
+            width: 60px;
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-left: 0.5rem;
+        }
+
+        .size-bar {
+            height: 100%;
+            background: var(--gradient-accent);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 1.5rem;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Error state */
+        .error {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 1rem;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            color: var(--danger);
+        }
+
+        .error-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .error-message {
+            color: var(--text-secondary);
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        .error-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: var(--bg-tertiary);
+            padding: 0.75rem 1.25rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+
+        /* Empty state */
+        .empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: var(--text-muted);
+            gap: 0.75rem;
+        }
+
+        .empty-icon {
+            font-size: 2.5rem;
+            opacity: 0.5;
+        }
+
+        /* Search */
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            width: 260px;
+            padding: 0.625rem 1rem 0.625rem 2.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            pointer-events: none;
+        }
+
+        /* Tooltip */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-4px);
+            padding: 0.375rem 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 100;
+        }
+
+        [data-tooltip]:hover::after {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .app {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .items-header,
+            .item-row {
+                grid-template-columns: 1fr 100px 120px;
+            }
+
+            .item-type {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">📊</div>
+                <span class="logo-text">Disk Analyzer</span>
+            </div>
+            
+            <div class="header-stats" id="header-stats">
+                <div class="stat">
+                    <span class="stat-label">Total Size</span>
+                    <span class="stat-value" id="total-size">—</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Items</span>
+                    <span class="stat-value" id="total-items">—</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Current Path</span>
+                    <span class="stat-value" id="current-path">—</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" placeholder="Search files and folders..." id="search-input">
+                </div>
+            </div>
+        </header>
+
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="sidebar-title">Directory Tree</h2>
+            </div>
+            <div class="tree-container" id="tree-container">
+                <!-- Tree will be rendered here -->
+            </div>
+        </aside>
+
+        <main class="main">
+            <nav class="breadcrumb" id="breadcrumb">
+                <!-- Breadcrumb will be rendered here -->
+            </nav>
+            <div class="content" id="content">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <span class="loading-text">Loading disk report...</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // State
+        let diskData = null;
+        let currentNode = null;
+        let searchQuery = '';
+
+        // Utility functions
+        function escapeHtml(text) {
+            if (!text) return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            const size = bytes / Math.pow(1024, i);
+            return size.toFixed(size < 10 ? 2 : 1) + ' ' + units[i];
+        }
+
+        function getFileUrl(path) {
+            // Properly encode the path for file:// URLs
+            const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+            return 'file://' + encodedPath;
+        }
+
+        function getIcon(type) {
+            return type === 'dir' ? '📁' : '📄';
+        }
+
+        function countItems(node) {
+            let count = 1;
+            if (node.children) {
+                for (const child of node.children) {
+                    count += countItems(child);
+                }
+            }
+            return count;
+        }
+
+        function getMaxSize(children) {
+            if (!children || children.length === 0) return 1;
+            return Math.max(...children.map(c => c.size));
+        }
+
+        function filterChildren(children, query) {
+            if (!query) return children;
+            const lower = query.toLowerCase();
+            return children.filter(child => 
+                child.name.toLowerCase().includes(lower) ||
+                child.path.toLowerCase().includes(lower)
+            );
+        }
+
+        function getPathParts(path) {
+            return path.split('/').filter(Boolean);
+        }
+
+        function findNodeByPath(root, targetPath) {
+            if (root.path === targetPath) return root;
+            if (root.children) {
+                for (const child of root.children) {
+                    const found = findNodeByPath(child, targetPath);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        // Render functions
+        function renderTree(node, container, level = 0) {
+            const hasChildren = node.children && node.children.length > 0;
+            const isExpanded = level < 2; // Auto-expand first 2 levels
+
+            const itemEl = document.createElement('div');
+            itemEl.className = `tree-item${currentNode && currentNode.path === node.path ? ' selected' : ''}`;
+            itemEl.innerHTML = `
+                <span class="tree-toggle ${hasChildren && isExpanded ? 'expanded' : ''}">${hasChildren ? '▶' : ''}</span>
+                <span class="tree-icon">${getIcon(node.type)}</span>
+                <span class="tree-name" title="${escapeHtml(node.path)}">${escapeHtml(node.name)}</span>
+                <span class="tree-size">${formatSize(node.size)}</span>
+            `;
+
+            itemEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigateTo(node);
+                
+                // Toggle expansion
+                if (hasChildren) {
+                    const toggle = itemEl.querySelector('.tree-toggle');
+                    const childContainer = itemEl.nextElementSibling;
+                    if (childContainer && childContainer.classList.contains('tree-children')) {
+                        toggle.classList.toggle('expanded');
+                        childContainer.classList.toggle('expanded');
+                    }
+                }
+            });
+
+            container.appendChild(itemEl);
+
+            if (hasChildren) {
+                const childContainer = document.createElement('div');
+                childContainer.className = `tree-children${isExpanded ? ' expanded' : ''}`;
+                
+                // Only render directories in tree
+                const dirs = node.children.filter(c => c.type === 'dir');
+                for (const child of dirs) {
+                    renderTree(child, childContainer, level + 1);
+                }
+                
+                container.appendChild(childContainer);
+            }
+        }
+
+        function renderBreadcrumb(node) {
+            const breadcrumb = document.getElementById('breadcrumb');
+            const parts = getPathParts(node.path);
+            
+            let html = '';
+            let currentPath = '';
+            
+            for (let i = 0; i < parts.length; i++) {
+                currentPath += '/' + parts[i];
+                const isLast = i === parts.length - 1;
+                const pathCopy = currentPath;
+                
+                html += `
+                    <span class="breadcrumb-item ${isLast ? 'current' : ''}" data-path="${escapeHtml(pathCopy)}">
+                        ${escapeHtml(parts[i])}
+                    </span>
+                `;
+                
+                if (!isLast) {
+                    html += '<span class="breadcrumb-separator">/</span>';
+                }
+            }
+            
+            breadcrumb.innerHTML = html;
+            
+            // Add click handlers
+            breadcrumb.querySelectorAll('.breadcrumb-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const path = el.dataset.path;
+                    const targetNode = findNodeByPath(diskData, path);
+                    if (targetNode) {
+                        navigateTo(targetNode);
+                    }
+                });
+            });
+        }
+
+        function renderItems(node) {
+            const content = document.getElementById('content');
+            const children = node.children || [];
+            const filtered = filterChildren(children, searchQuery);
+            
+            if (filtered.length === 0) {
+                content.innerHTML = `
+                    <div class="empty">
+                        <span class="empty-icon">📭</span>
+                        <span>${searchQuery ? 'No matching items found' : 'This folder is empty'}</span>
+                    </div>
+                `;
+                return;
+            }
+
+            const maxSize = getMaxSize(filtered);
+            
+            let html = `
+                <div class="items-header">
+                    <div>Name</div>
+                    <div>Size</div>
+                    <div>Type</div>
+                    <div>Actions</div>
+                </div>
+            `;
+
+            filtered.forEach((child, index) => {
+                const sizePercent = Math.max(5, (child.size / maxSize) * 100);
+                
+                html += `
+                    <div class="item-row" style="animation-delay: ${index * 0.03}s">
+                        <div class="item-name">
+                            <span class="item-icon">${getIcon(child.type)}</span>
+                            <div class="item-label">
+                                <span class="item-title" title="${escapeHtml(child.name)}">${escapeHtml(child.name)}</span>
+                                <span class="item-path" title="${escapeHtml(child.path)}">${escapeHtml(child.path)}</span>
+                            </div>
+                        </div>
+                        <div class="item-size">
+                            ${formatSize(child.size)}
+                            <div class="size-bar-container">
+                                <div class="size-bar" style="width: ${sizePercent}%"></div>
+                            </div>
+                        </div>
+                        <div class="item-type">
+                            <span class="type-badge ${child.type}">${child.type === 'dir' ? '📁 Folder' : '📄 File'}</span>
+                        </div>
+                        <div class="item-actions">
+                            ${child.type === 'dir' ? `
+                                <button class="action-btn" data-action="open" data-path="${escapeHtml(child.path)}" title="Open folder">
+                                    📂 Open
+                                </button>
+                            ` : ''}
+                            <a class="action-btn" href="${getFileUrl(child.path)}" target="_blank" title="Reveal in Finder">
+                                🔍 Finder
+                            </a>
+                        </div>
+                    </div>
+                `;
+            });
+
+            content.innerHTML = html;
+
+            // Add click handlers for open buttons
+            content.querySelectorAll('[data-action="open"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const path = btn.dataset.path;
+                    const targetNode = findNodeByPath(diskData, path);
+                    if (targetNode) {
+                        navigateTo(targetNode);
+                    }
+                });
+            });
+        }
+
+        function navigateTo(node) {
+            currentNode = node;
+            
+            // Update header stats
+            document.getElementById('current-path').textContent = node.name;
+            document.getElementById('total-size').textContent = formatSize(node.size);
+            document.getElementById('total-items').textContent = countItems(node).toLocaleString();
+            
+            // Render views
+            renderBreadcrumb(node);
+            renderItems(node);
+            
+            // Update tree selection
+            document.querySelectorAll('.tree-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+            // Find and select the matching tree item (would need to track this better)
+        }
+
+        function showError(message, code = null) {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="error">
+                    <span class="error-icon">⚠️</span>
+                    <h2 class="error-title">Failed to Load Report</h2>
+                    <p class="error-message">${message}</p>
+                    ${code ? `<code class="error-code">${code}</code>` : ''}
+                </div>
+            `;
+        }
+
+        // Initialize
+        async function init() {
+            try {
+                const response = await fetch('disk-report.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                diskData = await response.json();
+                currentNode = diskData;
+                
+                // Render tree
+                const treeContainer = document.getElementById('tree-container');
+                treeContainer.innerHTML = '';
+                renderTree(diskData, treeContainer);
+                
+                // Navigate to root
+                navigateTo(diskData);
+                
+            } catch (error) {
+                console.error('Failed to load disk report:', error);
+                showError(
+                    'Could not load disk-report.json. Make sure you have run the analyzer script and are serving this page via HTTP (not file://).',
+                    `python -m http.server 8000`
+                );
+            }
+        }
+
+        // Search functionality
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            if (currentNode) {
+                renderItems(currentNode);
+            }
+        });
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
+
